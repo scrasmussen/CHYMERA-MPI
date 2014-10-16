@@ -48,4 +48,5 @@ check : poisson2D
 	@poisson2D
 
 clean :
-	rm -rf $(OBJS) *.o *.vti *.mod poisson
+	rm -rf $(OBJS) *.o poisson2D
+	rm -rf *.mod *.i90 *.vti
