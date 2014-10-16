@@ -220,8 +220,16 @@ private
      ! This part is a pain, but it is a straight-forward way to derive the adiabatic index
      if(H2STAT>=0)then
      do irho=1,NEOS_RHO
+!jni
        irhop=irho+1
+       if(irhop>NEOS_RHO) then 
+         irhop=NEOS_RHO
+       endif
        irhom=irho-1
+       if(irhom<1) then 
+         irhom=1
+       end if
+!jni
        den0=rho_table(irho)
        logden0=log(den0)
        denm=rho_table(irhom)
