@@ -20,11 +20,11 @@ C$OMP DO SCHEDULE(STATIC) PRIVATE(mu)
          DO K=1,KMAX2
             DO J=jstart,jmax2
 
-              call get_gamma2(eps(J,K,L),rho(J,K,L),tempk(J,K,L),
-     &             mu,gamma1(J,K,L))
-              p(J,K,L) = bkmpcgs*rho(J,K,L)*tempk(J,K,L)*rhoconv
-     &            / (mu*pconv)
-
+c              call get_gamma(eps(J,K,L),rho(J,K,L),tempk(J,K,L),
+c     &             mu,gamma)
+c              p(J,K,L) = bkmpcgs*rho(J,K,L)*tempk(J,K,L)*rhoconv
+c     &            / (mu*pconv)
+               p(j,k,l) = eps(j,k,l)*(gamma - one)
             end do
          ENDDO
       ENDDO
