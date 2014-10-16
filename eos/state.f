@@ -29,13 +29,6 @@ c     &            / (mu*pconv)
          ENDDO
       ENDDO
 C$OMP END DO
-c        do l =1,8
-c           do k = 1,4
-c              do j = 1,7
-c        write(97,*) p(j,k,l), (gamma-1)*eps(j,k,l)
-c              end do
-c           end do
-c        end do
 
       RETURN
       END
