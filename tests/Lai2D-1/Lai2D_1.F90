@@ -1,3 +1,8 @@
+!! Using memory alloc'd by FFTW should be faster
+!
+#define USE_FFTW_ALLOC
+
+
 Module Lai2D_1
 !=============================================================================
 ! Name        : Lai2D_1.F90
@@ -16,9 +21,9 @@ use, intrinsic :: ISO_C_BINDING, only : C_PTR
 use params, only : M, N, kind_r, kind_c
 implicit none
 
-type(C_PTR) :: pF, pFn, pG, pGn, plan_forward, plan_backward, plan_g
-real(kind_r), pointer :: F(:,:), G(:)
-complex(kind_c), pointer :: Fn(:,:), Gn(:)
+type(C_PTR) :: pF, pFn, pG, pGn, plan_forward, plan_backward
+real(kind_r), pointer :: F(:,:)
+complex(kind_c), pointer :: Fn(:,:)
 
 Contains
 !-----------------------------------------------------------------------------
@@ -42,55 +47,48 @@ Subroutine Initialize(U)
   use, intrinsic :: ISO_C_BINDING, only : C_SIZE_T, C_F_Pointer
   use Params, only : M, N, DR, DTH, R, TH, PI, ZERO
   use FFTW, only : fftw_alloc_real, fftw_plan_many_dft_r2c, &
-                   fftw_plan_many_dft_c2r, fftw_plan_dft_r2c_1d, FFTW_MEASURE
+                   fftw_plan_many_dft_c2r, FFTW_MEASURE
   implicit none
   real(kind_r), intent(OUT), pointer :: U(:,:)
 
-  integer :: i, j, mode
+  integer :: i, j
   integer :: rank, howmany, idist, odist, istride, ostride
-  integer(C_SIZE_T), parameter :: nModes = N
+  integer(C_SIZE_T), parameter :: nModes = N + 2    ! padding fixes memory error?
 
 !-----------------------------------------------------------------------------
 
   ! calculate plan for FFTW
   !
 
-  print *, "nModes=", nModes
+  print *, "nModes=", nModes, "N=", N, "M=", M
   print *, "PI=", PI
-
-  mode = 2
 
   pF  = fftw_alloc_real(nModes*(M+2))
   pFn = fftw_alloc_real((1+nModes/2)*(M+2))
-  pG  = fftw_alloc_real(nModes)
-  pGn = fftw_alloc_real(1+nModes/2)
 
-  call C_F_Pointer(pF,  F,  shape=[N,M+2])        ! includes halo region
-  call C_F_Pointer(pFn, Fn, shape=[1+N/2,M+2])    ! includes halo region
-  call C_F_Pointer(pG,  G,  shape=[N])
-  call C_F_Pointer(pGn, Gn, shape=[1+N/2])
+#ifdef USE_FFTW_ALLOC
+  call C_F_Pointer(pF,  F,  shape=[N,M+2])
+  call C_F_Pointer(pFn, Fn, shape=[1+N/2,M+2])
+#else
+  allocate(F(N,M+2), Fn(1+N/2,M+2))
+#endif
 
   rank    = 1     ! 1D transforms
-  howmany = M     ! one transform for each interior radial grid point
+  howmany = M+2   ! one transform for each interior radial grid point
   idist   = N     ! distance between first element of first array and first element of second array
   odist   = N
   istride = 1     ! distance between elements in the transform dimension
   ostride = 1
 
-!TODO - DELETEME
-!  plan_forward  = fftw_plan_dft_r2c_1d(N, F(:,mode), Fn, FFTW_MEASURE)
-!  plan_backward = fftw_plan_dft_c2r_1d(N, Fn(:,mode), F(:,mode), FFTW_MEASURE)
-
   plan_forward  = fftw_plan_many_dft_r2c(rank,[N],howmany,F ,[N],istride,idist,               &
                                                           Fn,[N],ostride,odist,FFTW_MEASURE)
   plan_backward = fftw_plan_many_dft_c2r(rank,[N],howmany,Fn,[N],istride,idist,               &
                                                           F ,[N],ostride,odist,FFTW_MEASURE)
-  plan_g        = fftw_plan_dft_r2c_1d(N, G, Gn, FFTW_MEASURE)
 
   !... Allocate independent and dependent variables
   !    --------------------------------------------
   allocate(Th(0:N-1), R(0:M+1))
-  allocate(U(0:N-1,0:M+1), F(0:N-1,0:M+1))
+  allocate(U(0:N-1,M+2))
 
   !... Initialize arrays and set boundary conditions
   !    ---------------------------------------------
@@ -103,20 +101,22 @@ Subroutine Initialize(U)
      Th(j) = j*DTH
   end do
 
-  do i = 1, M+1
+  do i = 2, M+1
      F(:,i) = 3*cos(Th)
   end do
 
+  F(:,  1) = F(:,2)          ! inner boundary (for now)
+  F(:,M+2) = 5 + cos(Th)     ! outer boundary
+
   ! TODO - check sin(Th), doesn't seem to work
-  G(:) = 5 + cos(Th)     ! outer boundary
 
   U = ZERO
-  U(:,M+1) = G(:)
+  U(:,M+2) = F(:,M+2)
 
 End Subroutine Initialize
 
 
-Subroutine Finalize()
+Subroutine Finalize
 !=============================================================================
 ! Free memory and FFTW plans
 !=============================================================================
@@ -127,61 +127,56 @@ Subroutine Finalize()
 
   call fftw_destroy_plan(plan_forward)
   call fftw_destroy_plan(plan_backward)
-  call fftw_destroy_plan(plan_g)
 
+#ifdef USE_FFTW_ALLOC
   call fftw_free(pF)
   call fftw_free(pFn)
-  call fftw_free(pG)
-  call fftw_free(pGn)
+#endif
+
+  nullify(F, Fn)
 
 End Subroutine Finalize
 
 
-Subroutine Transform()
+Subroutine Transform
 !=============================================================================
 ! Transform the mass density forcing function
 !=============================================================================
   use FFTW, only : fftw_execute_dft_r2c, fftw_execute_dft_c2r
   implicit none
-  integer :: mode
 
 !-----------------------------------------------------------------------------
 
-  mode = 2
-
   print *
-  print *, "Initial:"
-  print*, F(:,1)
-  print*, F(:,2)
+  print *, "Initial(F): shape=", shape(F)
+  print *, F(:,1)
+  print *, F(:,2)
+  print *, F(:,3)
+  print *, F(:,4)
   print *
 
   call fftw_execute_dft_r2c(plan_forward, F, Fn)
   Fn = Fn/N
 
-  print *, "Forward(Fn):"
+  print *, "Forward(Fn): shape=", shape(Fn)
   print *, Fn(:,1)
   print *, Fn(:,2)
-  print *
-
-  call fftw_execute_dft_r2c(plan_g, G, Gn)
-  Gn = Gn/N
-
-  print *, "Forward(Gn):"
-  print *, Gn
+  print *, Fn(:,3)
+  print *, Fn(:,4)
   print *
 
   call fftw_execute_dft_c2r(plan_backward, Fn, F)
-  print *, "Backward:"
+  print *, "Backward(F):"
   print *, F(:,1)
   print *, F(:,2)
+  print *, F(:,3)
+  print *, F(:,4)
   print *
-
-stop
 
 End Subroutine Transform
 
 
-Subroutine Solve()
+Subroutine Solve
 !=============================================================================
 ! Solves the tridiagonal system
 !=============================================================================
@@ -198,31 +193,48 @@ Subroutine Solve()
 
 !-----------------------------------------------------------------------------
 
-  mode = 2
-
 ! TODO - make matrix coefficients correctly complex 
 !
-  do i = 1, M
-     a = 1.0d0 / (2*i - 1)
+  do mode = 1, N
 
-     DL(i) = 1 - a                        ! first value not used
-     DU(i) = 1 + a                        ! last  value not used
-     D (i) = -2*(1 + 2*(mode*a)**2)
+     do i = 1, M
+        a = 1.0d0 / (2*i - 1)
 
-!    B(i,1) = Fn(mode,i)*DR*DR   !TODO-FIXME
-     B(i,1) = Fn(mode,i)*DR*DR
+        DL(i) = 1 - a
+        DU(i) = 1 + a
+        D (i) = -2*(1 + 2*(mode*a)**2)
 
-     print *, "MATrix:", i, a, DL(i), DU(i), D(i), B(i,1)
+        !    B(i,1) = Fn(mode,i)*DR*DR   !TODO-FIXME
+        B(i,1) = Fn(mode,i+1)
+
+        print *, "MATrix:", mode, i, a
+        print *, "    DL:", DL(i)
+        print *, "    DU:", DU(i)
+        print *, "    D :", D (i)
+        print *, "    B :", B (i,1)
+        print *
+
+        B(i,1) = B(i,1)*DR*DR
+
+     end do
+
+     !... boundary conditions
+     !    -------------------
+
+     D(1) = D(1) + ((-1)**mode) * DL(1)      ! lower boundary goes to diagonal
+     B(M,1) = B(M,1) - DU(M)*Fn(mode,M+2)    ! upper boundary goes to RHS
+
+     print *, "    BC:", Fn(mode,M+2)
+     print *, "    BC:", B(M,1)
+     print *
+
+     call zgtsv(M, NRHS, DL(2), D, DU, B, LDB, info)
+
+     print *, "mode=", mode, "  info=", info
+     print *, B(:,1)
+     print *
 
   end do
-
-! TODO - need all modes because G has constant
-  B(M,1) = B(M,1) - DU(M)*Gn(mode)
-
-  call zgtsv(M, NRHS, DL(2), D, DU, B, LDB, info)
-
-  print *, "info=", info
-  print *, B(:,1)
 
 End Subroutine Solve
 
