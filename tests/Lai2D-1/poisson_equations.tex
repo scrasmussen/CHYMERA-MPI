@@ -1,0 +1,58 @@
+
+\documentclass[12pt]{article}
+\usepackage{lingmacros}
+\usepackage{tree-dvips}
+\begin{document}
+
+
+From Lai paper, "A Simple Compact Fourth-Order Poisson Solver on Polar Geometry", JCP, 182, 337-345 (2002).
+
+\section*{Equations for Poisson Solver}
+
+The grid $(\theta, r, z)$ over the interior domain $(N, M, L)$, where:
+$$ 0 < r < 1$$
+$$ 0 \leq \theta < 2 \pi $$
+and where $N$ is the number of grid points along the circle
+
+
+$$ \theta_j = j \Delta \theta $$
+$$ \Delta \theta = 2 \pi / N $$
+$$ j = 0, 1, ..., N-1$$
+
+$$ r_i = (i - 1/2) \Delta r $$
+$$  \Delta r = \frac{2}{(2 M + 1)}$$
+$$ i = 0, 1, ..., M + 1$$
+
+with interior points: \quad $i = 1, 2, ..., M$
+
+and outer boundary : \quad $r_{M+1} = 1$
+
+\subsection*{Difference Operators}
+
+Centered difference operators for first and second derivatives are:
+$$ \delta_0 U_i = \frac{U_{i+1} - U_{i-1}}{2 \Delta r}$$
+$$ \delta^2 U_i = \frac{U_{i+1} - 2 U_i + U_{i-1}}{\Delta r^2}$$
+
+Equation for Fourier mode $U_i$ is
+$$ \delta^2 U_i + \frac{1}{r_i} \delta_0 U_i - \frac{n^2}{r_i^2} U_i = F_i $$
+
+This leads to a tridiagonal matrix to solve with lower band $DL$, diagonal $D$, and upper band $DU$, where,
+$$ \Delta r^2 DU = 1 + a$$
+$$ \Delta r^2 DL = 1 - a$$
+$$ \Delta r^2 D = -2 (1 + 2 n^2 a^2)$$
+where,
+$$ a = \frac{\Delta r}{2 r_i} = \frac{1}{2i-1}$$
+
+\section*{Test Case 1}
+
+Let
+$$ u(\theta, r) = r^2 \cos \theta + 5 $$
+with
+$$ f(\theta, r) = 3 \cos \theta $$
+and inner boundary 
+$$ U_0 = (-1)^n U_1 $$
+adding $(-1)^n U_1 $ to 
+and outer boundary condition
+$$ u(\theta, 1) = g(\theta) = \cos\theta + 5 $$
+
+\end{document}
