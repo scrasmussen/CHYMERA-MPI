@@ -7,9 +7,11 @@ FC = ifort
 CC = icc
 
 OPT_FLAG = -g
+OPT_FLAG = -debug -O0
 
 CFLAGS  = $(OPT_FLAG)
 FFLAGS  = $(OPT_FLAG)
+LDFLAGS = $(OPT_FLAG) -Wl,-no_pie
 
 OBJS = params.o FFTW.o Lai2D_1.o zgtsv.o xerbla.o
 LIBS = -lfftw3 -lm
