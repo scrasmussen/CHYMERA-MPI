@@ -25,7 +25,6 @@ C***********************************************************************
       character::date_date*8,date_time*10,date_zone*5
 
       real*8 limiter
-
 c...arrays for various starts (see itype below).  Eventually,
 c...only the arrays in POIS, STATE, and EOM are evolved.
 
@@ -96,7 +95,6 @@ C              PERTURB IT WITH RANDOM PERTURBATION.
 c-------------------------------------------------------------------------------
 c  Read run parameter file.
 c
-
       WRITE(6,10000) 'fort.5'
 10000 FORMAT('Reading run parameter file ',a)
       OPEN(UNIT=5,FILE='fort.5',STATUS='OLD')
@@ -140,7 +138,6 @@ c
        
       CVHEAT=CURLYR/(XMU*(GAMMA-1.0))
       DTHETA=two*PI/dble(LMAX)
-
       
 c
 c*******************************************************************************
@@ -163,25 +160,61 @@ c
 
          OPEN(UNIT=2,FILE='fort.2',STATUS='OLD')    
 
-         READ(2,1685)PINDEX,CON2,RRR2,OMCEN,DENCEN,TOVERW,
-     &        ROF3N,ZOF3N,A1NEWZ,JREQ,KZPOL
+c         READ(2,1685)PINDEX,CON2,RRR2,OMCEN,DENCEN,TOVERW,ROF3N,ZOF3N,
+c     &        A1NEWZ,JREQ,KZPOL
+
+         READ(2,*)PINDEX,CON2,RRR2,OMCEN,DENCEN,TOVERW,ROF3N,ZOF3N,
+     &        A1NEWZ,JREQ,KZPOL
 
  1685    FORMAT(3X,1PE22.15,2X,8(1PE22.15,2X),2I4)
 
          write(*,1685)PINDEX,CON2,RRR2,OMCEN,DENCEN,TOVERW,
      &        ROF3N,ZOF3N,A1NEWZ,JREQ,KZPOL
          
-         READ(2,1617) DENNY
-         READ(2,1617) ANGGY
+c         READ(2,1617) DENNY
+c         READ(2,1617) ANGGY
+         READ(2,*) DENNY
+         READ(2,*) ANGGY
  1617    FORMAT(8(1PE22.15,2X))
          CLOSE(2)
+
+         tmass=0.0
+         ajtot=0.0
+         do l=1,lmax
+            do k=2,kmax1
+               do j=2,jmax1
+                  volume=4.0*3.141592654/lmax*(j-2)*rof3n**3
+                  tmass=tmass+denny(j,k)*volume
+                  ajtot=ajtot+anggy(j,k)*denny(j,k)*volume
+               end do
+            end do
+         end do
+c         write(61,*) tmass,ajtot
+         print *, 'tmass =',tmass,'ajtot=',ajtot
+         print *, 'max j,k,l =',jmax,kmax,lmax
+         tmassini = tmass
+         tmassadd = zero
+         tmassout = zero
+         tmassacc = zero
+         totcool  = zero
+         totdflux = zero
+         totheat  = zero
+         totirr   = zero
+         etotfl   = zero
+         eflufftot= zero
+         time     = zero
+
+         write(6,*) tmass,tmsasini,tmassadd,tmassout,tmassacc
+         write(6,*) totcool,totdflux,totheat,totirr,etotfl,eflufftot
 
          den=dencen
          rholmt=dencen*gridlim
          epslmt=(1.d0/(gamma-1.0))*rholmt**gamma*gridlim
          dumlmt=epslmt**(1.d0/gamma)
          OMMAX=OMCEN
-         sound=SQRT(gamma*(DENNY(2,2)**(gamma-1.d0)))
+
+         sound=SQRT(gamma*(DEN**(gamma-1.d0)))
+         konst=one
 
 !$OMP PARALLEL DEFAULT(SHARED) PRIVATE(LP,j,k,l)                        &
 !$OMP&  SHARED(gamma,konst,den)
@@ -191,8 +224,8 @@ c
                do j=2,jmax1
                   rho(j,k,l)=denny(j,k)
                   jn(j,k,L)=anggy(j,k)
-                  if(rho(j,k,l).lt.1.e-10*den) then
-                    rho(j,k,l)=1.e-10*den
+                  if(rho(j,k,l).lt.gridlim*den) then
+                    rho(j,k,l)=gridlim*den
                     jn(j,k,L)=0.d0
                   endif
                   s(j,k,l)=0.d0
@@ -337,8 +370,8 @@ c...  Standard read in .........................................................
       enddo
 !$OMP END PARALLEL DO
 
-            ommax=omega(jmin,2,1)
-            ommax=max(1.d-14,ommax)     !dkb - temp fix for underflow problem
+c            ommax=omega(jmin,2,1)
+c            ommax=max(1.d-14,ommax)     !dkb - temp fix for underflow problem
             dencen=den
             rholmt=dencen*gridlim
             epslmt=(1.d0/(gamma-1.0))*rholmt**gamma*gridlim
@@ -358,16 +391,18 @@ c...  Standard read in .........................................................
             read(7) EPS
             read(7)ROF3N,ZOF3N,DELT,TIME,ELOST,DEN,SOUND,
      &        JREQ,OMMAX
-            read(7,IOSTAT=ios) tmassini,tmass,tmassadd,
+            if (jmin.gt.2) then
+            read(7) tmassini,tmass,tmassadd,
      &         tmassout,tmassacc,totcool,totdflux,totheat,totirr,etotfl,
      &         eflufftot  !ACB
-
-            if (ios /= 1) then 
-               print *, "Last set of data missing. Check input."
             endif
 
-            ommax=omega(jmin,2,1)
-            ommax=max(1.d-14,ommax)     !dkb - temp fix for underflow problem
+c            if (ios /= 1) then 
+c               print *, "Last set of data missing. Check input."
+c            endif
+c            ommax=omega(jmin,2,1)
+c            ommax=max(1.d-14,ommax)     !dkb - temp fix for underflow problem
+
             dencen=den
             rholmt=dencen*gridlim
             epslmt=(1.d0/(gamma-1.0))*rholmt**gamma*gridlim
@@ -392,11 +427,12 @@ c...  Read in data, then increase the radial grids by 2x .......................
             read(7,IOSTAT=ios) tmassini,tmass,tmassadd, 
      &         tmassout,tmassacc,totcool,totdflux,totheat,totirr,etotfl, 
      &         eflufftot  !ACB 
- 
+            print *, "ios =", ios 
             if (ios /= 1) then  
                print *, "Last set of data missing. Check input." 
             endif 
-
+            print *, tmassini,tmass,tmassadd,tmassout,tmassacc, 
+     &           totcool,totdflux,totheat,totirr,etotfl,eflufftot 
             dencen=den
             rholmt=dencen*gridlim
             epslmt=(1.d0/(gamma-1.0))*rholmt**gamma*gridlim
@@ -511,8 +547,8 @@ c...  Read in data, then increase both radial and vertical grids by 2x .........
                print *, "Last set of data missing. Check input." 
             endif 
        
-            ommax=omega(jmin,2,1)
-            ommax=max(1.d-14,ommax)
+c            ommax=omega(jmin,2,1)
+c            ommax=max(1.d-14,ommax)
             dencen=den
             rholmt=dencen*gridlim
             epslmt=(1.d0/(gamma-1.0))*rholmt**gamma*gridlim
@@ -809,7 +845,7 @@ c
        write(3,116) ' PARA ->   ',ac
       case(3)
        write(3,"( ' H2 TREATMENT: EQUILIBRIUM')")
-      case(4)
+      case(-1)
        write(3,"( ' H2 TREATMENT: SINGLE GAMMA')")
        write(3,116) " GAMMA ->", gamma
       end select
@@ -884,9 +920,15 @@ c routine.
       select case(SETUNITS)
 
       case (0)
-
-      Msyscgs=Mstar*Msuncgs*(1.0+(tmassini/(1.0-tmassini)))
-      mass_star = 1.d0-tmassini
+!      mass_star = zero
+!      mass_star = 3.01d-1
+      mass_star = 5.0d0
+!       mass_star = 1.0d-1
+      if(mass_star.gt.0.0) then
+        Msyscgs=Mstar*Msuncgs*(1.0+1.0/mass_star)
+      else
+        Msyscgs=Mstar*Msuncgs
+      end if
       
       PKcgs = ( (Rdiskau*AUcgs/r(jreq))**(3.0-xn) * 
      &     Gcgs**xn * Msyscgs**(xn-1.0) )**(1.0/xn)
@@ -1147,10 +1189,12 @@ C...Smooth the edge of the initial model.
 
 
       limiter = den*phylim 
-
+ 499  format(2i5,1p1e12.5)
    
       DO 313 J=2,JMAX2
+c         write(47,*) j,rho(j,2,1)
          DO 314 K=2,KMAX2
+            write(47,499) j,k,rho(j,k,1)
             IF(rho(J,K,1).LT.limiter) THEN
                WRITE(3,315) J,K
  315           FORMAT(' JTOP=',I3,' KTOP=',I3)
@@ -1162,7 +1206,7 @@ C...Smooth the edge of the initial model.
 c
 c...Axisymmetric models done.  Restarted models done.  Return and hydro.
 c
-
+      
       IF((ITYPE.LE.5).OR.(ITYPE.EQ.8).OR.(ITYPE.EQ.9))
      &     RETURN
 
@@ -1214,8 +1258,8 @@ c
 c
 c...amplitude of initial hit
 c
-         WRITE(3,1001)AMP0
- 1001    FORMAT(5X,' RANDOM PERT, AMP0 =',1PE15.4)
+         WRITE(3,*)AMP0
+ 1001    FORMAT(' RANDOM PERT, AMP0 =',1PE15.4)
          DO 462 L=1,LMAX
          DO 462 K=2,KMAX1
          DO 462 J=jmin,jmax1
@@ -1389,7 +1433,6 @@ C....SET RHO AROUND Z-AXIS AND BELOW THE EQUATORIAL PLANE
 
 
 C***********************************************************************
- 
 
       SUBROUTINE RITE(IWHAT,IHEAD,  JST,JSP,JSK,  KST,KSP,KSK,
      &                LST,LSP,LSK)
@@ -1397,11 +1440,12 @@ C***********************************************************************
 
 #include "hydroparam.h"
 #include "globals.h"
+#include "units.h"
 
       COMMON /INSIDE/TMASS,ENEW,ELOST,EDIF,PHICHK,KLOCAT
       COMMON /TIMEST/INDX,ISOADI,ALLOW,DMAX,CHGMAX
       COMMON /ITS/ITSTRT,ITSTOP,ITSTEP
-
+      common /misc/ epsjr,rhojr,ommax
 
       REAL*8 FAREA(JMAX,KMAX),
      &       HAREA(JMAX,KMAX),
@@ -1414,15 +1458,14 @@ C***********************************************************************
       save ekold,egold,pdvold
       integer jstart
 
-      real*8 OMMAX
-
+c      real*8 OMMAX
       npr=int(10.0*nprime)
       tovw=int(1000.d0*toverw)
       write(index,'(i6.6)') itstep
       write(np,'(i2.2)') npr
       if(nprime.gt.3.0) np="in"
       write(tw,'(i2.2)') int(tovw)
-      OMMAX=zero
+c      OMMAX=zero
  
 C     IWHAT = 1  PRINTS ALL VARIABLES OUT IN 1PE12.4 FORMAT.
 C           = 0  BRIEF DIAGNOSTICS (2 LINES) ONLY.
@@ -1442,13 +1485,13 @@ c     end of bogus initializations.
  100  FORMAT('1')
  101  FORMAT(//,' J  K  L ',6X,'S',11X,'T',11X,'A',11X,'U',11X,'W',10X,
      &     'JN',9X,'OMEGA',9X,'EPS',9X,'P',10X,'RHO',9X,'PHI',/)
- 102  FORMAT(3I3,1P11E12.4)
+ 102  FORMAT(3I4,1P11E12.4)
  103  FORMAT(//)
  104  FORMAT('   TSTEP',4X,'TIME',8X,'DELT',8X,'ETOT/JT',4X,'EGRAV/ROT',
      &     2X,'EKIN/RZKIN',4X,'ENEW/CD',4X,'EDIF/DMAX',3X,'ELOST/JKL',
      &     4X,'TMASS',7X,'PHICHK',4X,'K',/)
  105  FORMAT(I8,1P10E12.4,I4)
- 106  FORMAT(4X,1PE12.4,' CODETIME',6X,1P5E12.4,I4,2I3,2X,1P2E12.4,/)
+ 106  FORMAT(1PE12.4,' CODETIME',6X,1P5E12.4,I4,I3,1X,I3,2X,1P2E12.4,/)
  118  FORMAT(///)
  119  FORMAT(2I4,1P5E11.3,2X,1P5E11.3)
  121  FORMAT('INITIAL, TOTAL, ADDED, OUTFLOW, ACCRETED MASSES',1P5E16.6)
@@ -1651,7 +1694,8 @@ C
          enddo
       enddo
 !$OMP END PARALLEL DO
-
+      
+      if (ictype.ne.0) then
       epsfull='coolheat_full.'//index
       open(unit=9,file=epsfull,form='unformatted')
       write(9) divflux
@@ -1665,10 +1709,11 @@ C
       write(9) time
       close(9)
 
-      open(unit=9,file="gamma1."//index,form='unformatted')
-      write(9) gamma1
-      write(9) time
-      close(9)
+      end if
+c      open(unit=9,file="gamma1."//index,form='unformatted')
+c      write(9) gamma1
+c      write(9) time
+c      close(9)
 
 C-----------------------------------------------------------------------
 C  Print some grid spacing information.
@@ -1871,9 +1916,9 @@ Cacm          DOT1=DOT1+U1*RHO(JW,K,L)*0.25
 !$OMP END MASTER
   504   CONTINUE
 !$OMP END PARALLEL
-  507   FORMAT(1X,I4,F7.3,1P12E10.2/)
-  667   FORMAT(1X,I4,F7.3,1P7E10.2/)
-  508   FORMAT(45X,'TOTAL ENERGIES =    ',1P6E10.2/)
+  507   FORMAT(1X,I4,F7.3,1P12E12.4/)
+  667   FORMAT(1X,I4,F7.3,1P7E14.5/)
+  508   FORMAT('TOTAL ENERGIES =    ',1P6E12.4/)
 C-----------------------------------------------------------------------
   999 RETURN
       END
