@@ -12,7 +12,7 @@ Module Params
 
   integer, parameter :: NDIMS  =   2
   integer, parameter :: M      =   2
-  integer, parameter :: N      =   2
+  integer, parameter :: N      =   4
   integer, parameter :: H      =   1
 
   integer, parameter :: kind_r = C_DOUBLE
