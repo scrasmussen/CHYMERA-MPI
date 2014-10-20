@@ -38,7 +38,7 @@
 !    1 = pure ortho -- this is not really physical for astro applications
 !    2 = set mixture
 !    3 = equilibrium
-!    4 = single gamma law
+!    -1 = single gamma law
 !    Be sure to set ac and bc for mixture (ac: para component, bc: ortho component)
 !    also pick a metallicity by adjusting xabun, yabun, and zabun.
 
