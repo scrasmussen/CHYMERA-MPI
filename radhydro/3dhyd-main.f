@@ -196,7 +196,6 @@ crpl..xxxtodo: make this parameter a read-in.
       tcoeftenfile='tctot.'//index
       massfile='massflow.'//index
       epsfile='coolheat.'//index
-      spangfile='spang.'//index
 
       OPEN(unit=18,file=coeffile)
       OPEN(unit=19,file=centfile)
@@ -509,7 +508,7 @@ C..(6) 1/2 SOURCE S, T, A, RHO, EPS.
             tmass=tmass*two
 !$OMP END MASTER 
 #if EXTERNAL_POT > 0
-         call ExternalPot(ITSTEP)
+         call ExternalPot()
 #endif
 
 !$OMP MASTER
@@ -717,7 +716,6 @@ c...Calculate total Fourier components m=1-8
 !               massc(j)=0.d0
 !            end do
          END IF   
-         IF(MOD(ITSTEP,50).EQ.0) THEN
 !$OMP PARALLEL DEFAULT(SHARED) PRIVATE(k,j,l,m)                         &
 !$OMP&  SHARED(zof3n,dtheta)
 !$OMP DO SCHEDULE(STATIC)
@@ -770,7 +768,6 @@ c
 
             write(13,104)time,(totcoef(m),m=1,8)
             flush(13)
-         END IF 
 
 C...Diagnostic Information for COM and M=1 power...
          IF(MOD(ITSTEP,IDIAG).EQ.0) THEN
