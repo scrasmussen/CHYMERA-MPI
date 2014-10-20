@@ -1,6 +1,6 @@
 !! Using memory alloc'd by FFTW should be faster
 !
-#define USE_FFTW_ALLOC
+#undef USE_FFTW_ALLOC
 
 
 Module Lai2D_1
@@ -21,7 +21,7 @@ use, intrinsic :: ISO_C_BINDING, only : C_PTR
 use params, only : M, N, kind_r, kind_c
 implicit none
 
-type(C_PTR) :: pF, pFn, pG, pGn, plan_forward, plan_backward
+type(C_PTR) :: pF, pFn, plan_forward, plan_backward
 real(kind_r), pointer :: F(:,:)
 complex(kind_c), pointer :: Fn(:,:)
 
@@ -53,7 +53,8 @@ Subroutine Initialize(U)
 
   integer :: i, j
   integer :: rank, howmany, idist, odist, istride, ostride
-  integer(C_SIZE_T), parameter :: nModes = N + 2    ! padding fixes memory error?
+!  integer(C_SIZE_T), parameter :: nModes = N + 2    ! padding fixes memory error?
+  integer(C_SIZE_T), parameter :: nModes = N
 
 !-----------------------------------------------------------------------------
 
@@ -159,7 +160,7 @@ Subroutine Transform
   Fn = Fn/N
 
   print *, "Forward(Fn): shape=", shape(Fn)
-  print *, Fn(:,1)
+  print *, REAL(Fn(:,1))
   print *, Fn(:,2)
   print *, Fn(:,3)
   print *, Fn(:,4)
@@ -195,17 +196,25 @@ Subroutine Solve
 
 ! TODO - make matrix coefficients correctly complex 
 !
-  do mode = 1, N
+
+print *
+print *, Fn(1,2:3)
+print *
+print *, Fn(2,2:3)
+print *
+
+
+  do mode = 0, N-1
 
      do i = 1, M
-        a = 1.0d0 / (2*i - 1)
+        a = 1.0d0/(2*i - 1)
 
         DL(i) = 1 - a
         DU(i) = 1 + a
         D (i) = -2*(1 + 2*(mode*a)**2)
 
-        !    B(i,1) = Fn(mode,i)*DR*DR   !TODO-FIXME
-        B(i,1) = Fn(mode,i+1)
+        !    B(i,1) = Fn(mode+1,i+1)*DR*DR   !TODO-FIXME
+        B(i,1) = Fn(mode+1,i+1)
 
         print *, "MATrix:", mode, i, a
         print *, "    DL:", DL(i)
@@ -221,10 +230,10 @@ Subroutine Solve
      !... boundary conditions
      !    -------------------
 
-     D(1) = D(1) + ((-1)**mode) * DL(1)      ! lower boundary goes to diagonal
-     B(M,1) = B(M,1) - DU(M)*Fn(mode,M+2)    ! upper boundary goes to RHS
+     D(1) = D(1) + ((-1)**mode) * DL(1)        ! lower boundary goes to diagonal  (TODO-MPI:only r==0)
+     B(M,1) = B(M,1) - DU(M)*Fn(mode+1,M+2)    ! upper boundary goes to RHS
 
-     print *, "    BC:", Fn(mode,M+2)
+     print *, "    BC:", Fn(mode+1,M+2)
      print *, "    BC:", B(M,1)
      print *
 
