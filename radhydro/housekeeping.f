@@ -5,7 +5,7 @@ C   LIMIT THE VELOCITIES
 #include "hydroparam.h"
 #include "globals.h"
       integer jstart
-      VLIM=two*SOUND
+      VLIM=six*SOUND
       if (jmin.gt.2) then
         jstart=jmin
       else
