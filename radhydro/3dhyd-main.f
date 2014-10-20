@@ -115,8 +115,8 @@ C guarantees they will go on the heap. ! COMMON BLOCK REMOVED. ACB
 
       CHARACTER  tim*6,rhofile*80,tempfile*80,starfile*80,
      &           restart_star*80
-      CHARACTER  coeffile*80,index*6,modefile*80,centfile*80
-      CHARACTER  tcoeffile*80,tcoeftenfile*80,massfile*80,epsfile*80
+      CHARACTER coeffile*80,index*6,modefile*80,centfile*80
+      CHARACTER tcoeffile*80,tcoeftenfile*80,massfile*80,epsfile*80
       real*8     massc(jmax2), massf(jmax2),mout
       real*8     sumeven(8),sumodd(8),theta(lmax),tcool,theat,tflux,tirr
       real*8     volume(jmax2),totcoef(8)
@@ -170,7 +170,7 @@ C....START EVOLUTION
       CORMAS=1.d-2
       A1NEWR=zero
       A1NEWZ=zero
-      OMMAX=zero ! just define it.  Tracking down old uses still
+c      OMMAX=zero ! just define it.  Tracking down old uses still
       KWFW=int(log10(dble(KMAX))/log10(two))-1 ! this is used in pot3.f
       
 cbkp..cs=0 for no shear viscosity (not implemented yet, so don't diddle!)
@@ -184,7 +184,6 @@ crpl..xxxtodo: make this parameter a read-in.
 
       CALL SETUP(ITSTRT,ITSTOP,IDIAG,ISOADI,ISTOR,ITSTEP,
      &           ISYM,MAXTRM)
-
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 ! OPEN RECORDING FILES
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -197,6 +196,7 @@ crpl..xxxtodo: make this parameter a read-in.
       tcoeftenfile='tctot.'//index
       massfile='massflow.'//index
       epsfile='coolheat.'//index
+      spangfile='spang.'//index
 
       OPEN(unit=18,file=coeffile)
       OPEN(unit=19,file=centfile)
@@ -211,7 +211,7 @@ crpl..xxxtodo: make this parameter a read-in.
         open(unit=987,file=trim(starfile),form='FORMATTED')
         open(unit=988,file=trim(restart_star),form='FORMATTED')
 #endif
-
+      CALL RITE(10,1, 1,1,1, 1,1,1, 1,1,1)
       CALL RITE(3,-1,  1,1,1,  1,1,1,  1,1,1)
 !$OMP PARALLEL DEFAULT(SHARED)
       CALL CLEARUP
@@ -221,7 +221,6 @@ crpl..xxxtodo: make this parameter a read-in.
       DMAX=nine*DEN/ten
       CHGMAX=0.0001
       MIRP=two*pi/ommax
-
 #if FLUID>0
         call Fluid_Setup()
 #endif
@@ -291,12 +290,10 @@ C... tmassout = mass flowing out of the top, bottom and outer boundary
 !$OMP END PARALLEL
       tmassout=tmassout+max(mout*delt,zero)
       tmassacc=tmassacc+(abs(mdot)*delt)
-
+      if(mod(itstep,10).eq.0) then
          write(17,20)itstep,time,tmass,tmassadd,tmassout,tmassacc,mdot
  20      format(i8,1x,6(1pe24.16,1x))
-
-
-
+      end if
          odelt=delt ! only used for PARTICLE>0 for now
          CALL DELTA(MOD(ITSTEP,IDIAG).EQ.0)
 #if PARTICLE>0
@@ -306,13 +303,11 @@ C... tmassout = mass flowing out of the top, bottom and outer boundary
 #endif
 
          TIME=TIME+DELT
-
 C.............................................C
 C.....START SECOND ORDER TIME INTEGRATION.....C
 C.............................................C
 
 C..(1) 1/2 SOURCE S, T, A, RHO, EPS.
-
 
          DELT=DELT*half
 #if PARTICLE>0
@@ -513,9 +508,8 @@ C..(6) 1/2 SOURCE S, T, A, RHO, EPS.
 !$OMP MASTER
             tmass=tmass*two
 !$OMP END MASTER 
-
 #if EXTERNAL_POT > 0
-         call ExternalPot()
+         call ExternalPot(ITSTEP)
 #endif
 
 !$OMP MASTER
@@ -570,6 +564,7 @@ c....Slices in j,k,l.................
 !
             LHALF=LMAX/2
             CALL RITE(1,-1,  2,JMAX1,1,  2,2,1,  1,1,1)
+c            CALL RITE(1, 1,  147,147,1,  2,KMAX1,1,  1,1,1)
             CALL RITE(1, 1,  JMAX/4,JMAX/4,1,  2,KMAX1,1,  1,1,1)
             CALL RITE(1, 1,  JMAX/2,JMAX/2,1,  2,KMAX1,1,  1,1,1)
             CALL RITE(10,1,  1,1,1,  1,1,1,  1,1,1)
@@ -603,11 +598,11 @@ c....Slices in j,k,l.................
             close(14)
 #endif
 
-            tempfile='temperat3d.'//tim
-            OPEN(UNIT=23,FILE=tempfile,FORM='UNFORMATTED')
-            write(23)tempK
-            write(23)time
-            CLOSE(23)  
+c            tempfile='temperat3d.'//tim
+c            OPEN(UNIT=23,FILE=tempfile,FORM='UNFORMATTED')
+c            write(23)tempK
+c            write(23)time
+c            CLOSE(23)  
 
 C	    call qcalc(tim)
 
@@ -717,11 +712,12 @@ c...Equatorial fourier mode information (M=1-LMAX/2)
 
 c...Calculate total Fourier components m=1-8
 
-            do j=2,jmax2
-               massf(j)=0.d0
-               massc(j)=0.d0
-            end do
-            
+!            do j=2,jmax2                               !wd this stuff
+!               massf(j)=0.d0                            is never used
+!               massc(j)=0.d0
+!            end do
+         END IF   
+         IF(MOD(ITSTEP,50).EQ.0) THEN
 !$OMP PARALLEL DEFAULT(SHARED) PRIVATE(k,j,l,m)                         &
 !$OMP&  SHARED(zof3n,dtheta)
 !$OMP DO SCHEDULE(STATIC)
@@ -729,9 +725,9 @@ c...Calculate total Fourier components m=1-8
                sumeven(m)=0.d0
                sumodd(m)=0.d0
                totcoef(m)=0.d0
-               do i=1,10
-                  totcoefcym(i,m)=0.d0
-               end do
+!               do i=1,10
+!                  totcoefcym(i,m)=0.d0
+!               end do
             end do
 !$OMP END DO NOWAIT
 c
@@ -773,9 +769,11 @@ c
 !$OMP END PARALLEL
 
             write(13,104)time,(totcoef(m),m=1,8)
+            flush(13)
+         END IF 
 
 C...Diagnostic Information for COM and M=1 power...
-
+         IF(MOD(ITSTEP,IDIAG).EQ.0) THEN
             CALL CENTMASS(DISP)
 
             avgm = 0.0
@@ -789,13 +787,11 @@ C...Diagnostic Information for COM and M=1 power...
             write(19,1111) itstep,time,disp,avgm
  1111              format(i8,1x,1pe13.4,1x,1pe13.4,1x,1pe13.4)
 
-
-
          END IF
+
 
  104     format(1pe13.4,8(1x,1pe13.4))
 
-         
  90   CONTINUE
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 c---------------end main loop-------------------------------------------
