@@ -30,8 +30,8 @@ subroutine wiggle(rho,rhf,zhf,vx,vy,fx,fy,delt,pi,r,phi,dr,dz,dphi,gsoft,JMAX,KM
        close(989)
     else
      odelt = delt
-     x = 0.000
-     y = 0.00
+     x = 0.d0
+     y = 0.d0
      r = x*x + y*y
      r = sqrt(r)
      if (x > 0.d0)then
