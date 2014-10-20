@@ -192,14 +192,12 @@ C    Depending on the type of cooling...
 
 
                   !call TempFindSpec(epred,rho(J,K,L),tpred) ! replaced by full table
-                  call get_gamma2(epred,rho(J,K,L),tpred,mu,gam)
+c                  call get_gamma(epred,rho(J,K,L),tpred,mu,gam)
 
                   !print *, epred,rho(J,K,L),tpred,mu,gam
                   !stop
 
-                  ppred = rho(J,K,L)*rhoconv
-     &                  * bkmpcgs/(mu*pconv)*tpred
-                  
+                  ppred = epred*(gamma-one)
                   eps(J,K,L) = eps(J,K,L) - half *(p(J,K,L)+ppred) * (
      &                 (r(J+1)*u(J+1,K,L)-r(J)*u(J,K,L))/(rhf(J)*rof3n)
      &               + (vt(J,K,LP)-vt(J,K,L))/(dtheta*rhf(J))
