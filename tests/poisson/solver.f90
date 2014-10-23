@@ -2,6 +2,7 @@
 ! This program is an excised version of the poisson solver in CHYMERA
 !       implicit none
 ! initialize everything.
+      use eos
  
 #include "hydroparam.h"
 #include "globals.h"
@@ -10,7 +11,12 @@
 
        COMMON /ITS/ITSTRT,ITSTOP,ITSTEP
 
+      MAXTRM=10
+      ISYM=2
+
+
 ! Call the setup routine, get density from fort.2 or fort.7.
+       call initialize_eos()
 
        call setup(itstrt,itstop,idiag,isoadi,istor,itstep,isym,maxtrm)
        print *, "called setup"
