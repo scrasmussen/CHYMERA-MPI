@@ -1,0 +1,23 @@
+1
+0
+1.5 -1.5 256 256 106 -64 0.0 0.9 1.0 !  T/|W| = 0.101 toroid
+-11.223 60.e13 7.0
+===================================================================
+/linear3
+
+========================================================================
+
+! 
+!
+! pin,np,jold,kold,jout,kout,lgrhomax,del,starnot
+
+!     np is nprime (for  infinity, enter a value .gt. 3.0);
+!     jold is the previous jout;
+!     jout and kout set the axis ratio. note that the ratio is
+!       (kout-2)/(jout-2);
+!     the log max dens we use 0;
+!     del is the percentage of the previous iteration to keep. The flatter
+!       flatter you get the closer to 1.o del needs to be.  Typically, 0.8
+!       or 0.9 works well.
+
+

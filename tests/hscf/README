@@ -1,0 +1,38 @@
+hscf is the Hachisu Self Consistent Field code. It is used to 
+calculate equilibrium disk models as initial conditions for
+runs in CHYMERA.
+
+To create an equilibrium model.
+1) Edit prmtr.h and hscf.in as needed.
+2) Compile hscf.f, run compiled code with hscf.in as input.
+3) Check polyout to see that model converged.
+4) Copy fort.93 to fort.2 in your CHYMERA-MPI/run folder.
+
+!!!!!!!!!!!!!!!!!!!!!!
+prmtr.h: SET jmax,kmax
+Choose r-radial and z-height grid dimensions (integers j and k in the code).
+CHYMERA augments this slice by creating a surface of revolution,
+a disk, for the fully 3D runs.
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+hscf.in: SET pin,np,jold,kold,jout,kout,lgrhomax,del,starnot
+See below for detailedish explanaition of variables.
+
+ case, enter 1,2 to construct a polytrope, white dwarf respectively.
+ rinit, enter 1 to read old rho.dat, or 0 to use all 1.0. 
+
+ pin,np,jold,kold,jout,kout,lgrhomax,del,starnot
+
+     pin is the polytropic index.
+     np is nprime (for  infinity, enter a value .gt. 3.0);
+     jold is the previous jout;
+     kold is the previous kout;
+     jout and kout set the axis ratio. note that the ratio is
+       (kout-2)/(jout-2);
+     the log max dens we use 0;
+     del is the percentage of the previous iteration to keep. The flatter
+       flatter you get the closer to 1.o del needs to be.  Typically, 0.8
+       or 0.9 works well.
+     starnot is the ration of star to diskmass, mass_star/mass_disk.
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
