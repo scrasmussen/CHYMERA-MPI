@@ -51,8 +51,8 @@ subroutine wiggle(rho,rhf,zhf,vx,vy,fx,fy,delt,pi,r,phi,dr,dz,dphi,gsoft,JMAX,KM
      call find_force(rho,rhf,zhf,x,y,dr,dz,dphi,fx,fy,gsoft,JMAX,KMAX,LMAX,JMIN)
      vy =  0.
      vx =  0.
-     PRINT *, "STOP. THINK. DO YOU KNOW WHAT YOU ARE DOING? SET UP THE STAR'S IC."
-     STOP
+!     PRINT *, "STOP. THINK. DO YOU KNOW WHAT YOU ARE DOING? SET UP THE STAR'S IC."
+!     STOP
     endif
     return
   endif
