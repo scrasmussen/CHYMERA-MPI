@@ -41,5 +41,5 @@ check : test_fftw
 	@test_fftw
 
 clean :
-	rm -rf $(OBJS) *.o test_DFT
+	rm -rf $(OBJS) *.o test_fftw
 	rm -rf *.mod *.i90 *.vti
