@@ -14,8 +14,11 @@ program Test_DFT
   print '(16(g10.3,1x))', "theta:", Th/(2*PI)
   print '(16(g10.3,1x))', "r:", R
 
-  call Transform
   call TransformFFTW
+
+!! test the direct O(N^2) algorithm
+!
+!  call Transform
 
   call Finalize
 
