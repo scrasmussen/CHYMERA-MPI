@@ -12,7 +12,6 @@ Module Params
 
   integer, parameter :: NDIMS  =   2
   integer, parameter :: M      =   2
-!  integer, parameter :: N      =   2
   integer, parameter :: N      =   6
   integer, parameter :: H      =   1
 
