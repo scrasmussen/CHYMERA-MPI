@@ -107,14 +107,14 @@ Subroutine Finalize
   nullify(F, Fn)
 
 #ifdef USE_FFTW_ALLOC
-  call fftw_free(pFn)
   call fftw_free(pF)
+  call fftw_free(pFn)
 #endif
 
 End Subroutine Finalize
 
 
-Subroutine TransformFFTW
+Subroutine Transform
 !=============================================================================
 ! Transform the mass density forcing function
 !=============================================================================
@@ -122,8 +122,6 @@ Subroutine TransformFFTW
   implicit none
 
 !-----------------------------------------------------------------------------
-
-  Fn = (0,0)
 
   print *
   print *, "Initial(F): shape=", shape(F)
@@ -167,14 +165,12 @@ Subroutine TransformFFTW
   print '(16(f7.3,1x))', AIMAG(Fn(:,4))
   print *
 
-STOP
-
-End Subroutine TransformFFTW
+End Subroutine Transform
 
 
-Subroutine Transform
+Subroutine TransformDirect
 !=============================================================================
-! Transform using slow direct DFT transform
+! Transform using slow direct DFT transform O(N^2)
 !=============================================================================
   use params, only : Th
   implicit none
@@ -243,7 +239,7 @@ Subroutine Transform
   print '(16(g10.3,1x))', Fn(:,4)
   print *
 
-end subroutine Transform
+end subroutine TransformDirect
 
 
 end module DFT
